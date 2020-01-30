@@ -7,30 +7,31 @@ import org.chris.atty.chess.*;
 public abstract class Piece implements Cloneable
 {
     protected final Colour colour;
-    protected int currentX;
-    protected int currentY;
+    protected Position position;
+    protected int numMoves = 0;
 
-    public Piece(Colour colour, int x, int y) {
-        this.currentX = x;
-        this.currentY = y;
+    public Piece(Colour colour, Position position) {
+        this.position = position;
         this.colour = colour;
     }
 
-    public int getX() {
-        return currentX;
+    public Position getPosition() {
+        return position;
     }
 
-    public int getY() {
-        return currentY;
-    }
-
-    public void move(int x, int y) {
-        this.currentX = x;
-        this.currentY = y;
+    public void move(Position newPosition) {
+        if (!position.equals(newPosition)) {
+            numMoves++;
+            this.position = newPosition;
+        }
     }
 
     public Colour getColour() {
         return colour;
+    }
+
+    public int getNumMoves() {
+        return numMoves;
     }
 
     public abstract Set<Move> getValidMoves(Board board);
@@ -40,7 +41,7 @@ public abstract class Piece implements Cloneable
 
     @Override
     public String toString() {
-        return getName() + "[" + getColour() + "] at " + "(" + getX() + "," + getY() + ")";
+        return getName() + "[" + getColour() + "] at " + "(" + position + ")";
     }
 
     public String icon() {
@@ -49,8 +50,7 @@ public abstract class Piece implements Cloneable
 
     @Override
     public int hashCode() {
-        int hash = (int) (currentX ^ (currentX >>> 32));
-        hash = 31 * hash + (int) (currentY ^ (currentY >>> 32));
+        int hash = 31 * position.hashCode();
         hash = 31 * hash + colour.hashCode();
         return hash;
     }
@@ -61,6 +61,6 @@ public abstract class Piece implements Cloneable
             return false;
         }
         Piece piece = (Piece) object;
-        return piece.getX() == currentX && piece.getY() == currentY && piece.getColour().equals(colour);
+        return piece.getPosition().equals(position) && piece.getColour().equals(colour);
     }
 }

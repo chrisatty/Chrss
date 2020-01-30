@@ -6,8 +6,8 @@ import org.chris.atty.chess.*;
 
 public class Queen extends Piece
 {
-    public Queen(Colour colour, int x, int y) {
-        super(colour, x, y);
+    public Queen(Colour colour, Position position) {
+        super(colour, position);
     }
 
     @Override
@@ -29,6 +29,8 @@ public class Queen extends Piece
 
     @Override
     public Queen clone() {
-        return new Queen(colour, currentX, currentY);
+        Queen clone = new Queen(colour, position);
+        clone.numMoves = numMoves;
+        return clone;
     }
 }

@@ -15,16 +15,16 @@ public class Board implements Cloneable
 
     private Set<Piece> pieces = new HashSet<>();
 
-    public boolean inBounds(int x, int y) {
-        return x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT;
+    public boolean inBounds(Position pos) {
+        return pos.getX() >= 0 && pos.getX() < WIDTH && pos.getY() >= 0 && pos.getY() < HEIGHT;
     }
 
-    public Optional<Piece> move(Piece piece, int x, int y) {
-        Optional<Piece> pieceToRemove = get(x, y);
+    public Optional<Piece> move(Piece piece, Position position) {
+        Optional<Piece> pieceToRemove = get(position);
         if (pieceToRemove.isPresent()) {
             pieces.remove(pieceToRemove.get());
         }
-        piece.move(x, y);
+        piece.move(position);
         return pieceToRemove;
     }
 
@@ -34,8 +34,8 @@ public class Board implements Cloneable
         pieces.add(newPiece);
     }
 
-    public Optional<Piece> get(int x, int y) {
-        return pieces.stream().filter(p -> p.getX() == x && p.getY() == y).findAny();
+    public Optional<Piece> get(Position position) {
+        return pieces.stream().filter(p -> p.getPosition().equals(position)).findAny();
     }
 
     public Set<Piece> getPieces(Colour colour) {
@@ -47,9 +47,7 @@ public class Board implements Cloneable
     }
 
     public void addPiece(Piece piece) {
-        if (get(piece.getX(), piece.getY()).isPresent()) {
-            System.out.println("Old piece " + get(piece.getX(), piece.getY()).get().toString());
-            System.out.println("New piece " + piece.toString());
+        if (get(piece.getPosition()).isPresent()) {
             throw new IllegalArgumentException("Piece already exists in location");
         }
         pieces.add(piece);

@@ -25,13 +25,13 @@ public class App
             System.out.print("Where you want to move it to? ");
             String move = scanner.nextLine();
             if (move.length() != 2) {
-                System.out.print("Invalid input");
+                System.out.println("Invalid input");
                 continue;
             }
             char newX = move.charAt(0);
             int newY = Integer.valueOf(String.valueOf(move.charAt(1)));
             System.out.println("Moving " + x + y + " to " + newX + newY);
-            if (!game.makeMove(x, y, newX, newY)) {
+            if (!game.makeMove(new Position(x, y), new Position(newX, newY))) {
                 System.out.println("Invalid move");
             }
             if (game.inCheck() && game.getState().equals(Game.State.IN_PROGRESS)) {

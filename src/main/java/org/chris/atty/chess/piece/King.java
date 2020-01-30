@@ -10,53 +10,46 @@ import org.chris.atty.chess.*;
 
 public class King extends Piece
 {
-    private boolean firstMove = true;
-
-    public King(Colour colour, int x, int y) {
-        super(colour, x, y);
+    public King(Colour colour, Position position) {
+        super(colour, position);
     }
 
     @Override
     public Set<Move> getValidMoves(Board board) {
+        int currentX = position.getX();
+        int currentY = position.getY();
         Optional<Piece>[][] boardArray = Utils.toArray(board);
         Set<Move> moves = new HashSet<>();
-        for (int x = currentX - 1; x < currentX + 1; x++) {
-            System.out.print("-");
+        for (int x = position.getX() - 1; x < position.getX() + 1; x++) {
             for (int y = currentY - 1; y < currentY + 1; y++) {
                 if (x != currentX && y != currentY && MoveUtils.canMoveTo(this, x, y, boardArray)) {
-                    moves.add(new Move(this, x, y));
+                    moves.add(new Move(this, Position.fromCoords(x, y)));
                 }
             }
         }
         // can we castle?
-        if (firstMove && !isInCheck(board)) {
+        if (numMoves == 0 && !isInCheck(board)) {
             Set<Rook> rooks = board.getPieces(colour)
                                 .stream()
                                 .filter(p -> p.getClass().equals(Rook.class))
                                 .map(p -> (Rook) p)
                                 .collect(Collectors.toSet());
             rooks.forEach(rook -> {
-                if (rook.canCastle()) {
+                if (rook.getNumMoves() == 0) {
                     boolean piecesBetween = false;
-                    for (int x = Math.min(currentX, rook.getX()) + 1; x < Math.max(currentX, rook.getX()); x++) {
-                        if (board.get(x, currentY).isPresent()) {
+                    for (int x = Math.min(currentX, rook.getPosition().getX()) + 1; x < Math.max(currentX, rook.getPosition().getX()); x++) {
+                        if (board.get(Position.fromCoords(x, position.getY())).isPresent()) {
                             piecesBetween = true;
                         }
                     }
                     if (!piecesBetween) {
-                        int xMove = rook.getX() < currentX ? -2 : 2;
-                        moves.add(new Move(this, currentX + xMove, currentY));
+                        int xMove = rook.getPosition().getX() < currentX ? -2 : 2;
+                        moves.add(new Move(this, Position.fromCoords(currentX + xMove, currentY)));
                     }
                 }
             });
         }
         return moves;
-    }
-
-    @Override
-    public void move(int x, int y) {
-        firstMove = false;
-        super.move(x, y);
     }
 
     @Override
@@ -69,9 +62,6 @@ public class King extends Piece
         return Integer.MAX_VALUE;
     }
 
-    public boolean canCastle() {
-        return firstMove;
-    }
 
     public boolean isInCheck(Board board) {
         return board.getAllPieces()
@@ -79,15 +69,25 @@ public class King extends Piece
                 .filter(p -> !p.getColour().equals(colour) && !p.getClass().equals(King.class))
                 .map(p -> p.getValidMoves(board))
                 .flatMap(Set::stream)
-                .filter(m -> m.getX() == this.getX() && m.getY() == this.getY())
+                .filter(m -> m.getPosition().equals(position))
                 .findAny()
                 .isPresent();
+        // Optional<Move> piece = board.getAllPieces()
+        //         .stream()
+        //         .filter(p -> !p.getColour().equals(colour) && !p.getClass().equals(King.class))
+        //         .map(p -> p.getValidMoves(board))
+        //         .flatMap(Set::stream)
+        //         .filter(m -> m.getPosition().equals(position))
+        //         .findAny();
+        // if (piece.isPresent()) {
+
+        // }
     }
 
     @Override
     public King clone() {
-        King king = new King(colour, currentX, currentY);
-        king.firstMove = this.firstMove;
-        return king;
+        King clone = new King(colour, position);
+        clone.numMoves = numMoves;
+        return clone;
     }
 }

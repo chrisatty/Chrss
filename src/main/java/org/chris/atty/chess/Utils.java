@@ -10,7 +10,7 @@ public class Utils {
         Optional<Piece>[][] board = (Optional<Piece>[][]) new Optional<?>[origBoard.WIDTH][origBoard.HEIGHT];
         for (int x = 0; x < origBoard.WIDTH; x++) {
             for (int y = 0; y < origBoard.HEIGHT; y++) {
-                board[x][y] = origBoard.get(x, y);
+                board[x][y] = origBoard.get(Position.fromCoords(x, y));
             }
         }
         return board;

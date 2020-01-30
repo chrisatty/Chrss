@@ -6,8 +6,8 @@ import org.chris.atty.chess.*;
 
 public class Bishop extends Piece
 {
-    public Bishop(Colour colour, int x, int y) {
-        super(colour, x, y);
+    public Bishop(Colour colour, Position position) {
+        super(colour, position);
     }
 
     @Override
@@ -27,6 +27,8 @@ public class Bishop extends Piece
 
     @Override
     public Bishop clone() {
-        return new Bishop(colour, currentX, currentY);
+        Bishop clone = new Bishop(colour, position);
+        clone.numMoves = numMoves;
+        return clone;
     }
 }

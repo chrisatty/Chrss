@@ -29,26 +29,17 @@ public class Game
         });
     }
 
-    public Board getBoard() {
-        return board;
+    public boolean makeMove(char oldF, int oldR, char newF, int newR) {
+        return makeMove(new Position(oldF, oldR), new Position(newF, newR));
     }
 
-    public boolean makeMove(char x, int y, char newX, int newY) {
-        return makeMove(
-            String.valueOf(x).toLowerCase().charAt(0) - 'a',
-            y - 1,
-            String.valueOf(newX).toLowerCase().charAt(0) - 'a',
-            newY - 1
-        );
-    }
-
-    public boolean makeMove(int oldX, int oldY, int newX, int newY) {
-        Optional<Piece> piece = board.get(oldX, oldY);
+    public boolean makeMove(Position oldPos, Position newPos) {
+        Optional<Piece> piece = board.get(oldPos);
         if (!piece.isPresent()) {
-            System.out.println("There is no piece there to move " + oldX + oldY);
+            System.out.println("There is no piece there to move " + oldPos);
             return false;
         }
-        return makeMove(new Move(piece.get(), newX, newY));
+        return makeMove(new Move(piece.get(), newPos));
     }
 
     public boolean makeMove(Move move) {
@@ -60,51 +51,49 @@ public class Game
             System.out.println("Wrong colour");
             return false;
         }
-        if (!board.inBounds(move.getX(), move.getY())) {
+        if (!board.inBounds(move.getPosition())) {
             System.out.println("You cant move a piece off the board");
             return false;
         }
         // check if valid
         if (!move.getPiece().getValidMoves(board).contains(move)) {
-            System.out.print("Invalid move.");
+            System.out.println("Invalid move " + move);
             return false;
         }
         // make sure this move doesnt put us in check
         Board updatedBoard = board.clone();
-        Piece pieceToMove = updatedBoard.get(move.getPiece().getX(), move.getPiece().getY()).get();
-        updatedBoard.move(pieceToMove, move.getX(), move.getY());
+        Piece pieceToMove = updatedBoard.get(move.getPiece().getPosition()).get();
+        updatedBoard.move(pieceToMove, move.getPosition());
         if (inCheck(updatedBoard)) {
             System.out.println("You can't be in check");
             return false;
-        }        
+        }
 
-        // are we castling?
-        boolean castle = move.getPiece().getClass().equals(King.class)
-            && Math.abs(move.getPiece().getX()) -  Math.abs(move.getX()) == 2;
-
-        Optional<Piece> removedPiece = board.move(move.getPiece(), move.getX(), move.getY());
+        Optional<Piece> removedPiece = board.move(move.getPiece(), move.getPosition());
         if (removedPiece.isPresent()) {
             removedPieces.add(removedPiece.get());
         }
-
-        if (castle) {
-            int rookX = move.getPiece().getX() == 1 ? 0 : board.WIDTH - 1;
-            Piece rook = board.get(rookX, move.getPiece().getY()).get();
-            int rookNewX = move.getPiece().getX() == 1 ? 2 : 4;
-            board.move(rook, rookNewX, move.getPiece().getY());
+        
+        if (move.isCastle()) {
+            System.out.println("We've castled");
+            Optional<Piece> piece = board.get(new Position(
+                move.getPosition().getFile() == 'B' ? 'A' : 'H', move.getPosition().getRank())
+            );
+            if (!piece.isPresent() || !piece.get().getClass().equals(Rook.class)
+                    || !piece.get().getColour().equals(move.getPiece().getColour())) {
+                throw new IllegalStateException("Rook not in correct place to castle");
+            }
+            Rook rook = (Rook) piece.get();
+            board.move(rook, new Position(
+                move.getPosition().getFile() == 'B' ? 'C' : 'E',
+                move.getPosition().getRank())
+            );
         }
 
         history.add(move);
 
-        // see if any pawns need to be converted to Queens
-        Optional<Piece> convertPawn = board.getAllPieces()
-                            .stream()
-                            .filter(p -> p.getClass().equals(Pawn.class))
-                            .filter(p -> p.getY() == 0 || p.getY() == board.HEIGHT -1)
-                            .findAny();
-        if (convertPawn.isPresent()) {
-            Piece pawn = convertPawn.get();
-            board.replace(pawn, new Queen(pawn.getColour(), pawn.getX(), pawn.getY()));
+        if (move.isPawnPromote()) {
+            board.replace(move.getPiece(), new Queen(move.getPiece().getColour(), move.getPiece().getPosition()));
         }
 
         if (isCheckmate()) {
@@ -149,8 +138,8 @@ public class Game
         for (Move move: validMoves) {
             Board newBoard = board.clone();
             // we need to move the cloned piece, so retrieve it from new board
-            Piece pieceToMove = newBoard.get(move.getPiece().getX(), move.getPiece().getY()).get();
-            newBoard.move(pieceToMove, move.getX(), move.getY());
+            Piece pieceToMove = newBoard.get(move.getPiece().getPosition()).get();
+            newBoard.move(pieceToMove, move.getPosition());
             if (!inCheck(newBoard)) {
                 return false;
             }
@@ -210,26 +199,38 @@ public class Game
     private Board createBoard() {
         Board board = new Board();
         //white
-        IntStream.range(0, board.WIDTH).forEach(x -> board.addPiece(new Pawn(Colour.WHITE, x, 1)));
-        board.addPiece(new Rook(Colour.WHITE, 0, 0));
-        board.addPiece(new Knight(Colour.WHITE, 1, 0));
-        board.addPiece(new Bishop(Colour.WHITE, 2, 0));
-        board.addPiece(new King(Colour.WHITE, 3, 0));
-        board.addPiece(new Queen(Colour.WHITE, 4, 0));
-        board.addPiece(new Bishop(Colour.WHITE, 5, 0));
-        board.addPiece(new Knight(Colour.WHITE, 6, 0));
-        board.addPiece(new Rook(Colour.WHITE, 7, 0));
+        for(char rank = 'A'; rank <= 'H'; rank++ ) {
+            board.addPiece(new Pawn(Colour.WHITE, new Position(rank, 2)));
+        }
+        board.addPiece(new Rook(Colour.WHITE, new Position('A', 1)));
+        board.addPiece(new Knight(Colour.WHITE, new Position('B', 1)));
+        board.addPiece(new Bishop(Colour.WHITE, new Position('C', 1)));
+        board.addPiece(new King(Colour.WHITE, new Position('D', 1)));
+        board.addPiece(new Queen(Colour.WHITE, new Position('E', 1)));
+        board.addPiece(new Bishop(Colour.WHITE, new Position('F', 1)));
+        board.addPiece(new Knight(Colour.WHITE, new Position('G', 1)));
+        board.addPiece(new Rook(Colour.WHITE, new Position('H', 1)));
 
         // black
-        IntStream.range(0, board.WIDTH).forEach(x -> board.addPiece(new Pawn(Colour.BLACK, x, 6)));
-        board.addPiece(new Rook(Colour.BLACK, 0, 7));
-        board.addPiece(new Knight(Colour.BLACK, 1, 7));
-        board.addPiece(new Bishop(Colour.BLACK, 2, 7));
-        board.addPiece(new King(Colour.BLACK, 3, 7));
-        board.addPiece(new Queen(Colour.BLACK, 4, 7));
-        board.addPiece(new Bishop(Colour.BLACK, 5, 7));
-        board.addPiece(new Knight(Colour.BLACK, 6, 7));
-        board.addPiece(new Rook(Colour.BLACK, 7, 7));
+        for(char rank = 'A'; rank <= 'H'; rank++ ) {
+            board.addPiece(new Pawn(Colour.BLACK, new Position(rank, 7)));
+        }
+        board.addPiece(new Rook(Colour.BLACK, new Position('A', 8)));
+        board.addPiece(new Knight(Colour.BLACK, new Position('B', 8)));
+        board.addPiece(new Bishop(Colour.BLACK, new Position('C', 8)));
+        board.addPiece(new King(Colour.BLACK, new Position('D', 8)));
+        board.addPiece(new Queen(Colour.BLACK, new Position('E', 8)));
+        board.addPiece(new Bishop(Colour.BLACK, new Position('F', 8)));
+        board.addPiece(new Knight(Colour.BLACK, new Position('G', 8)));
+        board.addPiece(new Rook(Colour.BLACK, new Position('H', 8)));
         return board;
+    }
+
+    public Map<Position, Piece> getBoard() {
+        Map<Position, Piece> map = new HashMap<>();
+        board.getAllPieces().forEach(p -> {
+            map.put(p.getPosition(), p);
+        });
+        return map;
     }
 }

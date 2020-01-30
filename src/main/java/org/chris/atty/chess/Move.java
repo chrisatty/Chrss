@@ -5,31 +5,34 @@ import org.chris.atty.chess.piece.*;
 public class Move
 {
     private final Piece piece;
-    private final int x;
-    private final int y;
+    private final Position position;
+    private final boolean isCastle;
 
-    public Move(Piece piece, int x, int y) {
+    public Move(Piece piece, Position position) {
         this.piece = piece;
-        this.x = x;
-        this.y = y;
+        this.position = position;
+        this.isCastle = Move.isCastle(this);
     }
 
     public Piece getPiece() {
         return piece;
     }
 
-    public int getX() {
-        return x;
+    public Position getPosition() {
+        return position;
     }
 
-    public int getY() {
-        return y;
+    public boolean isCastle() {
+        return isCastle;
+    }
+
+    public boolean isPawnPromote() {
+        return piece.getClass().equals(Pawn.class) && (position.getRank() == 1 || position.getRank() == 8);
     }
 
     @Override
     public int hashCode() {
-        int hash = (int) (x ^ (x >>> 32));
-        hash = 31 * hash + (int) (y ^ (y >>> 32));
+        int hash = 31 * position.hashCode();
         hash = 31 * hash + piece.hashCode();
         return hash;
     }
@@ -40,11 +43,21 @@ public class Move
             return false;
         }
         Move move = (Move) object;
-        return move.getX() == x && move.getY() == y && move.getPiece().equals(piece);
+        return move.getPosition().equals(position) && move.getPiece().equals(piece);
     }
 
     @Override
     public String toString() {
-        return piece.toString() + " -> " + x + "," + y;
+        return piece.icon() + "-> " + position;
+    }
+
+    // is this move a castle?
+    private static boolean isCastle(Move move) {
+        Piece movingPiece = move.getPiece();
+        Position currentPosition = movingPiece.getPosition();
+        Position newPosition = move.getPosition();
+        return movingPiece.getClass().equals(King.class) &&
+            currentPosition.getRank() == newPosition.getRank() &&
+            Math.abs(currentPosition.getFile() - newPosition.getFile()) > 1;
     }
 }

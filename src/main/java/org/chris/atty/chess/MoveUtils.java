@@ -12,40 +12,40 @@ public class MoveUtils {
         Optional<Piece>[][] boardArray = Utils.toArray(board);
         Set<Move> moves = new HashSet<>();
 
-        int x = piece.getX() + 1;
-        int y = piece.getY() + 1;
+        int x = piece.getPosition().getX() + 1;
+        int y = piece.getPosition().getY() + 1;
         while (canMoveTo(piece, x, y, boardArray)) {
-            moves.add(new Move(piece, x, y));
+            moves.add(new Move(piece, Position.fromCoords(x, y)));
             if (boardArray[x][y].isPresent()) {
                 break;
             }
             x++; y++;
         }
 
-        x = piece.getX() + 1;
-        y = piece.getY() - 1;
+        x = piece.getPosition().getX() + 1;
+        y = piece.getPosition().getY() - 1;
         while (canMoveTo(piece, x, y, boardArray)) {
-            moves.add(new Move(piece, x, y));
+            moves.add(new Move(piece, Position.fromCoords(x, y)));
             if (boardArray[x][y].isPresent()) {
                 break;
             }
             x++; y--;
         }
 
-        x = piece.getX() - 1;
-        y = piece.getY() + 1;
+        x = piece.getPosition().getX() - 1;
+        y = piece.getPosition().getY() + 1;
         while (canMoveTo(piece, x, y, boardArray)) {
-            moves.add(new Move(piece, x, y));
+            moves.add(new Move(piece, Position.fromCoords(x, y)));
             if (boardArray[x][y].isPresent()) {
                 break;
             }
             x--; y++;
         }
 
-        x = piece.getX() - 1;
-        y = piece.getY() - 1;
+        x = piece.getPosition().getX() - 1;
+        y = piece.getPosition().getY() - 1;
         while (canMoveTo(piece, x, y, boardArray)) {
-            moves.add(new Move(piece, x, y));
+            moves.add(new Move(piece, Position.fromCoords(x, y)));
             if (boardArray[x][y].isPresent()) {
                 break;
             }
@@ -57,11 +57,13 @@ public class MoveUtils {
     public static Set<Move> getStraightMoves(Piece piece, Board board) {
         Optional<Piece>[][] boardArray = Utils.toArray(board);
         Set<Move> moves = new HashSet<>();
+        int currentX = piece.getPosition().getX();
+        int currentY = piece.getPosition().getY();
 
-        for (int x = piece.getX() + 1; x < board.WIDTH; x++) {
-            if (canMoveTo(piece, x, piece.getY(), boardArray)) {
-                moves.add(new Move(piece, x, piece.getY()));
-                if (boardArray[x][piece.getY()].isPresent()) {
+        for (int x = currentX + 1; x < board.WIDTH; x++) {
+            if (canMoveTo(piece, x, currentY, boardArray)) {
+                moves.add(new Move(piece, Position.fromCoords(x, currentY)));
+                if (boardArray[x][currentY].isPresent()) {
                     break;
                 }
             } else {
@@ -69,10 +71,10 @@ public class MoveUtils {
             }
         }
 
-        for (int x = piece.getX() - 1; x >= 0; x--) {
-            if (canMoveTo(piece, x, piece.getY(), boardArray)) {
-                moves.add(new Move(piece, x, piece.getY()));
-                if (boardArray[x][piece.getY()].isPresent()) {
+        for (int x = currentX - 1; x >= 0; x--) {
+            if (canMoveTo(piece, x, currentY, boardArray)) {
+                moves.add(new Move(piece, Position.fromCoords(x, currentY)));
+                if (boardArray[x][currentY].isPresent()) {
                     break;
                 }
             } else {
@@ -80,10 +82,10 @@ public class MoveUtils {
             }
         }
 
-        for (int y = piece.getY() + 1; y < board.HEIGHT; y++) {
-            if (canMoveTo(piece, piece.getX(), y, boardArray)) {
-                moves.add(new Move(piece, piece.getX(), y));
-                if (boardArray[piece.getX()][y].isPresent()) {
+        for (int y = currentY + 1; y < board.HEIGHT; y++) {
+            if (canMoveTo(piece, currentX, y, boardArray)) {
+                moves.add(new Move(piece,  Position.fromCoords(currentX, y)));
+                if (boardArray[currentX][y].isPresent()) {
                     break;
                 }
             } else {
@@ -91,10 +93,10 @@ public class MoveUtils {
             }
         }
 
-        for (int y = piece.getY() - 1; y >= 0; y--) {
-            if (canMoveTo(piece, piece.getX(), y, boardArray)) {
-                moves.add(new Move(piece,  piece.getX(), y));
-                if (boardArray[piece.getX()][y].isPresent()) {
+        for (int y = currentY - 1; y >= 0; y--) {
+            if (canMoveTo(piece, currentX, y, boardArray)) {
+                moves.add(new Move(piece,  Position.fromCoords(currentX, y)));
+                if (boardArray[currentX][y].isPresent()) {
                     break;
                 }
             } else {
