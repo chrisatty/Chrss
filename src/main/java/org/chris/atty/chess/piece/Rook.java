@@ -6,12 +6,12 @@ import org.chris.atty.chess.*;
 
 public class Rook extends Piece
 {
-    public Rook(Colour colour, Position position) {
-        super(colour, position);
+    public Rook(Colour colour) {
+        super(colour);
     }
 
     @Override
-    public Set<Move> getValidMoves(Board board) {
+    public Set<Position> getValidMoves(Board board) {
         return MoveUtils.getStraightMoves(this, board);
     }
 
@@ -23,12 +23,5 @@ public class Rook extends Piece
     @Override
     public int getWorth() {
         return 5;
-    }
-
-    @Override
-    public Rook clone() {
-        Rook clone = new Rook(colour, position);
-        clone.numMoves = numMoves;
-        return clone;
     }
 }

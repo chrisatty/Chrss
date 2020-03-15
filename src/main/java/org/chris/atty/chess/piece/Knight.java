@@ -8,46 +8,51 @@ import org.chris.atty.chess.*;
 
 public class Knight extends Piece
 {
-    public Knight(Colour colour, Position position) {
-        super(colour, position);
+    public Knight(Colour colour) {
+        super(colour);
     }
 
     @Override
-    public Set<Move> getValidMoves(Board board) {
-        Optional<Piece>[][] boardArray = Utils.toArray(board);
-        Set<Move> moves = new HashSet<>();
-        int x = position.getX();
-        int y = position.getY();
+    public Set<Position> getValidMoves(Board board) {
+        Optional<Piece>[][] boardArray = board.toArray();
+        Set<Position> moves = new HashSet<>();
+        if (!board.find(this).isPresent()) {
+            return moves;
+        }
+        Position currentPosition = board.find(this).get();
+        int x = currentPosition.getX();
+        int y = currentPosition.getY();
+
         if (MoveUtils.canMoveTo(this, x+1, y+2, boardArray)) {
-            moves.add(new Move(this, Position.fromCoords(x+1, y+2)));
+            moves.add(Position.fromCoords(x+1, y+2));
         }
 
         if (MoveUtils.canMoveTo(this, x-1, y+2, boardArray)) {
-            moves.add(new Move(this, Position.fromCoords(x-1, y+2)));
+            moves.add(Position.fromCoords(x-1, y+2));
         }
 
         if (MoveUtils.canMoveTo(this, x+1, y-2, boardArray)) {
-            moves.add(new Move(this, Position.fromCoords(x+1, y-2)));
+            moves.add(Position.fromCoords(x+1, y-2));
         }
 
         if (MoveUtils.canMoveTo(this, x-1, y-2, boardArray)) {
-            moves.add(new Move(this, Position.fromCoords(x-1, y-2)));
+            moves.add(Position.fromCoords(x-1, y-2));
         }
 
         if (MoveUtils.canMoveTo(this, x+2, y+1, boardArray)) {
-            moves.add(new Move(this, Position.fromCoords(x+2, y+1)));
+            moves.add(Position.fromCoords(x+2, y+1));
         }
 
         if (MoveUtils.canMoveTo(this, x-2, y+1, boardArray)) {
-            moves.add(new Move(this, Position.fromCoords(x-2, y+1)));
+            moves.add(Position.fromCoords(x-2, y+1));
         }
 
         if (MoveUtils.canMoveTo(this, x+2, y-1, boardArray)) {
-            moves.add(new Move(this, Position.fromCoords(x+2, y-1)));
+            moves.add(Position.fromCoords(x+2, y-1));
         }
 
         if (MoveUtils.canMoveTo(this, x-2, y-1, boardArray)) {
-            moves.add(new Move(this, Position.fromCoords(x-2, y-1)));
+            moves.add(Position.fromCoords(x-2, y-1));
         }
         return moves;
     }
@@ -60,12 +65,5 @@ public class Knight extends Piece
     @Override
     public int getWorth() {
         return 3;
-    }
-
-    @Override
-    public Knight clone() {
-        Knight clone = new Knight(colour, position);
-        clone.numMoves = numMoves;
-        return clone;
     }
 }

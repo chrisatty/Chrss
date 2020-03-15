@@ -2,14 +2,14 @@ package org.chris.atty.chess;
 
 import java.util.Scanner;
 
+import org.chris.atty.chess.exceptions.InvalidMoveException;
+
 /**
  * Hello world!
  *
  */
-public class App 
-{
-    public static void main( String[] args )
-    {
+public class App {
+    public static void main( String[] args ) {
         Game game = new Game();
         Scanner scanner = new Scanner(System.in);
         while (game.getState().equals(Game.State.IN_PROGRESS)) {
@@ -31,8 +31,10 @@ public class App
             char newX = move.charAt(0);
             int newY = Integer.valueOf(String.valueOf(move.charAt(1)));
             System.out.println("Moving " + x + y + " to " + newX + newY);
-            if (!game.makeMove(new Position(x, y), new Position(newX, newY))) {
-                System.out.println("Invalid move");
+            try {
+                game.makeMove(new Position(x, y), new Position(newX, newY));
+            } catch (InvalidMoveException e) {
+                System.out.println(e.getMessage());
             }
             if (game.inCheck() && game.getState().equals(Game.State.IN_PROGRESS)) {
                 System.out.println("Careful, you are in check");

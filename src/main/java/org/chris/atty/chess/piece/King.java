@@ -1,29 +1,32 @@
 package org.chris.atty.chess.piece;
 
 import java.util.*;
+import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
-
-import javax.management.RuntimeErrorException;
-import javax.swing.border.Border;
 
 import org.chris.atty.chess.*;
 
 public class King extends Piece
 {
-    public King(Colour colour, Position position) {
-        super(colour, position);
+    public King(Colour colour) {
+        super(colour);
     }
 
     @Override
-    public Set<Move> getValidMoves(Board board) {
-        int currentX = position.getX();
-        int currentY = position.getY();
-        Optional<Piece>[][] boardArray = Utils.toArray(board);
-        Set<Move> moves = new HashSet<>();
-        for (int x = position.getX() - 1; x < position.getX() + 1; x++) {
-            for (int y = currentY - 1; y < currentY + 1; y++) {
-                if (x != currentX && y != currentY && MoveUtils.canMoveTo(this, x, y, boardArray)) {
-                    moves.add(new Move(this, Position.fromCoords(x, y)));
+    public Set<Position> getValidMoves(Board board) {
+        Optional<Piece>[][] boardArray = board.toArray();
+        Set<Position> moves = new HashSet<>();
+        if (!board.find(this).isPresent()) {
+            throw new IllegalStateException("King is not on the board");
+        }
+        Position currentPosition = board.find(this).get();
+        int currentX = currentPosition.getX();
+        int currentY = currentPosition.getY();
+
+        for (int x = currentX - 1; x <= currentX + 1; x++) {
+            for (int y = currentY - 1; y <= currentY + 1; y++) {
+                if ((x != currentX || y != currentY) && MoveUtils.canMoveTo(this, x, y, boardArray)) {
+                    moves.add(Position.fromCoords(x, y));
                 }
             }
         }
@@ -37,18 +40,20 @@ public class King extends Piece
             rooks.forEach(rook -> {
                 if (rook.getNumMoves() == 0) {
                     boolean piecesBetween = false;
-                    for (int x = Math.min(currentX, rook.getPosition().getX()) + 1; x < Math.max(currentX, rook.getPosition().getX()); x++) {
-                        if (board.get(Position.fromCoords(x, position.getY())).isPresent()) {
+                    Position rookPosition = board.find(rook).get();
+                    for (int x = Math.min(currentX, rookPosition.getX()) + 1; x < Math.max(currentX, rookPosition.getX()); x++) {
+                        if (board.get(Position.fromCoords(x, rookPosition.getY())).isPresent()) {
                             piecesBetween = true;
                         }
                     }
                     if (!piecesBetween) {
-                        int xMove = rook.getPosition().getX() < currentX ? -2 : 2;
-                        moves.add(new Move(this, Position.fromCoords(currentX + xMove, currentY)));
+                        int xMove = rookPosition.getX() < currentX ? -2 : 2;
+                        moves.add(Position.fromCoords(currentX + xMove, currentY));
                     }
                 }
             });
         }
+        // TODO make sure we're not moving next to another king.
         return moves;
     }
 
@@ -64,30 +69,14 @@ public class King extends Piece
 
 
     public boolean isInCheck(Board board) {
+        Position currentKingPos = board.find(this).get();
         return board.getAllPieces()
                 .stream()
                 .filter(p -> !p.getColour().equals(colour) && !p.getClass().equals(King.class))
                 .map(p -> p.getValidMoves(board))
                 .flatMap(Set::stream)
-                .filter(m -> m.getPosition().equals(position))
+                .filter(p -> p.equals(currentKingPos))
                 .findAny()
                 .isPresent();
-        // Optional<Move> piece = board.getAllPieces()
-        //         .stream()
-        //         .filter(p -> !p.getColour().equals(colour) && !p.getClass().equals(King.class))
-        //         .map(p -> p.getValidMoves(board))
-        //         .flatMap(Set::stream)
-        //         .filter(m -> m.getPosition().equals(position))
-        //         .findAny();
-        // if (piece.isPresent()) {
-
-        // }
-    }
-
-    @Override
-    public King clone() {
-        King clone = new King(colour, position);
-        clone.numMoves = numMoves;
-        return clone;
     }
 }

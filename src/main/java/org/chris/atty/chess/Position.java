@@ -9,6 +9,7 @@ public class Position {
         this.file = Character.toUpperCase(file);
         this.rank = rank;
     }
+
     public static Position fromCoords(int x, int y) {
         return new Position((char) (x + (int) 'A'), y + 1);
     }

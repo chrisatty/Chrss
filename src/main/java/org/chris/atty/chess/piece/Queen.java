@@ -6,13 +6,13 @@ import org.chris.atty.chess.*;
 
 public class Queen extends Piece
 {
-    public Queen(Colour colour, Position position) {
-        super(colour, position);
+    public Queen(Colour colour) {
+        super(colour);
     }
 
     @Override
-    public Set<Move> getValidMoves(Board board) {
-        Set<Move> moves = MoveUtils.getDiagonalMoves(this, board);
+    public Set<Position> getValidMoves(Board board) {
+        Set<Position> moves = MoveUtils.getDiagonalMoves(this, board);
         moves.addAll(MoveUtils.getStraightMoves(this, board));
         return moves;
     }
@@ -27,10 +27,4 @@ public class Queen extends Piece
         return 8;
     }
 
-    @Override
-    public Queen clone() {
-        Queen clone = new Queen(colour, position);
-        clone.numMoves = numMoves;
-        return clone;
-    }
 }

@@ -1,10 +1,9 @@
 package org.chris.atty.chess;
 
 import java.util.*;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
+import org.chris.atty.chess.exceptions.InvalidMoveException;
 import org.chris.atty.chess.piece.*;
 
 public class Game
@@ -23,83 +22,69 @@ public class Game
     public Game(List<Move> moves) {
         this();
         moves.forEach(move -> {
-            if (this.makeMove(move)) {
+            try {
+                this.makeMove(move.getOldPosition(), move.getNewPosition());
+            } catch (InvalidMoveException e) {
                 throw new IllegalArgumentException("Invalid move");
             }
         });
     }
 
-    public boolean makeMove(char oldF, int oldR, char newF, int newR) {
+    public Board makeMove(char oldF, int oldR, char newF, int newR) throws InvalidMoveException {
         return makeMove(new Position(oldF, oldR), new Position(newF, newR));
     }
 
-    public boolean makeMove(Position oldPos, Position newPos) {
-        Optional<Piece> piece = board.get(oldPos);
-        if (!piece.isPresent()) {
-            System.out.println("There is no piece there to move " + oldPos);
-            return false;
-        }
-        return makeMove(new Move(piece.get(), newPos));
-    }
-
-    public boolean makeMove(Move move) {
+    public Board makeMove(Position oldPos, Position newPos) throws InvalidMoveException {
+        // check is valid move
         if (!getState().equals(State.IN_PROGRESS)) {
-            System.out.println("Game has finished");
-            return false;
+            throw new InvalidMoveException("Game is over");
         }
-        if (!move.getPiece().getColour().equals(nextMove())) {
-            System.out.println("Wrong colour");
-            return false;
+        if (!board.inBounds(oldPos) || !board.inBounds(newPos)) {
+            throw new InvalidMoveException("Invalid board position");
         }
-        if (!board.inBounds(move.getPosition())) {
-            System.out.println("You cant move a piece off the board");
-            return false;
+        if (!board.get(oldPos).isPresent()) {
+            throw new InvalidMoveException("There is no piece at that position");
         }
-        // check if valid
-        if (!move.getPiece().getValidMoves(board).contains(move)) {
-            System.out.println("Invalid move " + move);
-            return false;
+
+        Piece pieceToMove = board.get(oldPos).get();
+        if (!pieceToMove.getColour().equals(nextMove())) {
+            throw new InvalidMoveException("Incorrect coloured piece to move");
+        }
+        if (!pieceToMove.getValidMoves(board).contains(newPos)) {
+            throw new InvalidMoveException("Invalid move");
         }
         // make sure this move doesnt put us in check
         Board updatedBoard = board.clone();
-        Piece pieceToMove = updatedBoard.get(move.getPiece().getPosition()).get();
-        updatedBoard.move(pieceToMove, move.getPosition());
+        updatedBoard.move(oldPos, newPos);
         if (inCheck(updatedBoard)) {
-            System.out.println("You can't be in check");
-            return false;
+            throw new InvalidMoveException("You cannot move into check");
         }
 
-        Optional<Piece> removedPiece = board.move(move.getPiece(), move.getPosition());
+        Optional<Piece> removedPiece = board.move(oldPos, newPos);
+        pieceToMove.incMoveCount();
+        
         if (removedPiece.isPresent()) {
             removedPieces.add(removedPiece.get());
         }
         
-        if (move.isCastle()) {
-            System.out.println("We've castled");
-            Optional<Piece> piece = board.get(new Position(
-                move.getPosition().getFile() == 'B' ? 'A' : 'H', move.getPosition().getRank())
-            );
-            if (!piece.isPresent() || !piece.get().getClass().equals(Rook.class)
-                    || !piece.get().getColour().equals(move.getPiece().getColour())) {
-                throw new IllegalStateException("Rook not in correct place to castle");
-            }
-            Rook rook = (Rook) piece.get();
-            board.move(rook, new Position(
-                move.getPosition().getFile() == 'B' ? 'C' : 'E',
-                move.getPosition().getRank())
-            );
+        // check if we've castled and move rook if so
+        if (pieceToMove.getClass().equals(King.class) && Math.abs(oldPos.getFile() - newPos.getFile()) >= 2) {
+            Position rookCurrent = newPos.getFile() == 'G' ? new Position('H', newPos.getRank()) : new Position('A', newPos.getRank());
+            Position rookNew = newPos.getFile() == 'G' ? new Position('F', newPos.getRank()) : new Position('D', newPos.getRank());
+            board.move(rookCurrent, rookNew);
         }
 
-        history.add(move);
-
-        if (move.isPawnPromote()) {
-            board.replace(move.getPiece(), new Queen(move.getPiece().getColour(), move.getPiece().getPosition()));
+        // do we need to promote a pawn?
+        if ((newPos.getRank() == 1 || newPos.getFile() == 8) && board.get(newPos).get().getClass().equals(Pawn.class)) {
+            board.add(new Queen(nextMove()), newPos);
         }
+
+        history.add(new Move(oldPos, newPos));
 
         if (isCheckmate()) {
             state = nextMove().equals(Colour.WHITE) ? State.BLACK_WIN : State.WHITE_WIN;
         }
-        return true;
+        return board;
     }
 
     public boolean inCheck() {
@@ -129,19 +114,15 @@ public class Game
         if (!inCheck()) {
             return false;
         }
-        Set<Move> validMoves = board.getPieces(nextMove())
-                    .stream()
-                    .map(p -> p.getValidMoves(board))
-                    .flatMap(Set::stream)
-                    .collect(Collectors.toSet());
         // if no valid moves can get out of check, its checkmate
-        for (Move move: validMoves) {
-            Board newBoard = board.clone();
-            // we need to move the cloned piece, so retrieve it from new board
-            Piece pieceToMove = newBoard.get(move.getPiece().getPosition()).get();
-            newBoard.move(pieceToMove, move.getPosition());
-            if (!inCheck(newBoard)) {
-                return false;
+        for (Piece piece : board.getPieces(nextMove())) {
+            Set<Position> validMoves = piece.getValidMoves(board);
+            for (Position move : validMoves) {
+                Board newBoard = board.clone();
+                newBoard.move(newBoard.find(piece).get(), move);
+                if (!inCheck(newBoard)) {
+                    return false;
+                }
             }
         }
         return true;
@@ -149,7 +130,6 @@ public class Game
 
     @Override
     public String toString() {
-        Optional<Piece>[][] boardArray = Utils.toArray(board);
         StringBuilder builder = new StringBuilder();
         System.out.println();
         builder.append("Captured pieces: " +
@@ -161,28 +141,7 @@ public class Game
             )
         );
         builder.append(System.lineSeparator());
-        builder.append("     A   B   C   D   E   F   G   H    ");
-        builder.append(System.lineSeparator());
-        for (int y = board.HEIGHT - 1; y >= 0 ; y--) {
-            builder.append("   ---------------------------------   ");
-            builder.append(System.lineSeparator());
-            builder.append(" " + (y+1) + " ");
-            for (int x = 0; x < board.WIDTH; x++) {
-                Optional<Piece> piece = boardArray[x][y];
-                if (piece.isPresent()) {
-                    builder.append("| " + piece.get().icon());
-                } else {
-                    builder.append("|   ");
-                }
-                
-            }
-            builder.append("|");
-            builder.append(" " + (y+1) + " ");
-            builder.append(System.lineSeparator());
-        }
-        builder.append("   ---------------------------------   ");
-        builder.append(System.lineSeparator());
-        builder.append("     A   B   C   D   E   F   G   H    ");
+        builder.append(board.toString());
         builder.append(System.lineSeparator());
         builder.append("Captured pieces: " +
             String.join(" ", removedPieces.stream()
@@ -200,37 +159,33 @@ public class Game
         Board board = new Board();
         //white
         for(char rank = 'A'; rank <= 'H'; rank++ ) {
-            board.addPiece(new Pawn(Colour.WHITE, new Position(rank, 2)));
+            board.add(new Pawn(Colour.WHITE), new Position(rank, 2));
         }
-        board.addPiece(new Rook(Colour.WHITE, new Position('A', 1)));
-        board.addPiece(new Knight(Colour.WHITE, new Position('B', 1)));
-        board.addPiece(new Bishop(Colour.WHITE, new Position('C', 1)));
-        board.addPiece(new King(Colour.WHITE, new Position('D', 1)));
-        board.addPiece(new Queen(Colour.WHITE, new Position('E', 1)));
-        board.addPiece(new Bishop(Colour.WHITE, new Position('F', 1)));
-        board.addPiece(new Knight(Colour.WHITE, new Position('G', 1)));
-        board.addPiece(new Rook(Colour.WHITE, new Position('H', 1)));
+        board.add(new Rook(Colour.WHITE), new Position('A', 1));
+        board.add(new Knight(Colour.WHITE), new Position('B', 1));
+        board.add(new Bishop(Colour.WHITE), new Position('C', 1));
+        board.add(new Queen(Colour.WHITE), new Position('D', 1));
+        board.add(new King(Colour.WHITE), new Position('E', 1));
+        board.add(new Bishop(Colour.WHITE), new Position('F', 1));
+        board.add(new Knight(Colour.WHITE), new Position('G', 1));
+        board.add(new Rook(Colour.WHITE), new Position('H', 1));
 
         // black
         for(char rank = 'A'; rank <= 'H'; rank++ ) {
-            board.addPiece(new Pawn(Colour.BLACK, new Position(rank, 7)));
+            board.add(new Pawn(Colour.BLACK), new Position(rank, 7));
         }
-        board.addPiece(new Rook(Colour.BLACK, new Position('A', 8)));
-        board.addPiece(new Knight(Colour.BLACK, new Position('B', 8)));
-        board.addPiece(new Bishop(Colour.BLACK, new Position('C', 8)));
-        board.addPiece(new King(Colour.BLACK, new Position('D', 8)));
-        board.addPiece(new Queen(Colour.BLACK, new Position('E', 8)));
-        board.addPiece(new Bishop(Colour.BLACK, new Position('F', 8)));
-        board.addPiece(new Knight(Colour.BLACK, new Position('G', 8)));
-        board.addPiece(new Rook(Colour.BLACK, new Position('H', 8)));
+        board.add(new Rook(Colour.BLACK), new Position('A', 8));
+        board.add(new Knight(Colour.BLACK), new Position('B', 8));
+        board.add(new Bishop(Colour.BLACK), new Position('C', 8));
+        board.add(new Queen(Colour.BLACK), new Position('D', 8));
+        board.add(new King(Colour.BLACK), new Position('E', 8));
+        board.add(new Bishop(Colour.BLACK), new Position('F', 8));
+        board.add(new Knight(Colour.BLACK), new Position('G', 8));
+        board.add(new Rook(Colour.BLACK), new Position('H', 8));
         return board;
     }
 
-    public Map<Position, Piece> getBoard() {
-        Map<Position, Piece> map = new HashMap<>();
-        board.getAllPieces().forEach(p -> {
-            map.put(p.getPosition(), p);
-        });
-        return map;
+    public Board getBoard() {
+        return board;
     }
 }

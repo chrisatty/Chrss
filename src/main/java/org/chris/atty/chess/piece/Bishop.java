@@ -6,12 +6,12 @@ import org.chris.atty.chess.*;
 
 public class Bishop extends Piece
 {
-    public Bishop(Colour colour, Position position) {
-        super(colour, position);
+    public Bishop(Colour colour) {
+        super(colour);
     }
 
     @Override
-    public Set<Move> getValidMoves(Board board) {
+    public Set<Position> getValidMoves(Board board) {
         return MoveUtils.getDiagonalMoves(this, board);
     }
 
@@ -23,12 +23,5 @@ public class Bishop extends Piece
     @Override
     public int getWorth() {
         return 3;
-    }
-
-    @Override
-    public Bishop clone() {
-        Bishop clone = new Bishop(colour, position);
-        clone.numMoves = numMoves;
-        return clone;
     }
 }

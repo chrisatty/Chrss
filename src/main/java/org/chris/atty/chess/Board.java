@@ -1,62 +1,122 @@
 package org.chris.atty.chess;
 
-import java.sql.SQLOutput;
-import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.chris.atty.chess.piece.*;
+import org.chris.atty.chess.piece.Piece;
 
 public class Board implements Cloneable
 {
     public final int HEIGHT = 8;
     public final int WIDTH = 8;
 
-    private Set<Piece> pieces = new HashSet<>();
+    private final Map<Position, Optional<Piece>> board;
+
+    public Board() {
+        board = new HashMap<>();
+        for (int x = 0; x < WIDTH; x++) {
+            for (int y=0; y < HEIGHT; y++) {
+                board.put(Position.fromCoords(x, y), Optional.empty());
+            }
+        }
+    }
+
+    private Board(Map<Position, Optional<Piece>> board) {
+        this.board = board;
+    }
+
 
     public boolean inBounds(Position pos) {
-        return pos.getX() >= 0 && pos.getX() < WIDTH && pos.getY() >= 0 && pos.getY() < HEIGHT;
+        return board.containsKey(pos);
     }
 
-    public Optional<Piece> move(Piece piece, Position position) {
-        Optional<Piece> pieceToRemove = get(position);
-        if (pieceToRemove.isPresent()) {
-            pieces.remove(pieceToRemove.get());
+    public Optional<Piece> move(Position oldPosition, Position newPosition) {
+        if (!inBounds(oldPosition) || !inBounds(newPosition)) {
+            throw new IllegalArgumentException("Invalid position on board");
         }
-        piece.move(position);
-        return pieceToRemove;
+        Optional<Piece> piece = board.get(oldPosition);
+        if (!piece.isPresent()) {
+            throw new IllegalArgumentException("No piece at position " + oldPosition);
+        }
+        board.put(oldPosition, Optional.empty());
+        return board.put(newPosition, piece);
     }
 
-    // used when pawns -> queen
-    public void replace(Piece oldPiece, Piece newPiece) {
-        pieces.remove(oldPiece);
-        pieces.add(newPiece);
+    public Optional<Position> find(Piece piece) {
+        return board.keySet().stream()
+                            .filter(p -> board.get(p).isPresent() && board.get(p).get().equals(piece))
+                            .findAny();
     }
 
     public Optional<Piece> get(Position position) {
-        return pieces.stream().filter(p -> p.getPosition().equals(position)).findAny();
+        return board.get(position);
     }
 
     public Set<Piece> getPieces(Colour colour) {
-        return pieces.stream().filter(p -> p.getColour().equals(colour)).collect(Collectors.toSet());
+        return board.keySet().stream()
+                            .filter(p -> board.get(p).isPresent())
+                            .map(p -> board.get(p).get())
+                            .filter(p -> p.getColour().equals(colour))
+                            .collect(Collectors.toSet());
     }
 
     public Set<Piece> getAllPieces() {
-        return pieces;
+        return board.keySet().stream()
+                            .filter(p -> board.get(p).isPresent())
+                            .map(p -> board.get(p).get())
+                            .collect(Collectors.toSet());
     }
 
-    public void addPiece(Piece piece) {
-        if (get(piece.getPosition()).isPresent()) {
-            throw new IllegalArgumentException("Piece already exists in location");
+    public Optional<Piece> add(Piece piece, Position position) {
+        if (!board.containsKey(position)) {
+            throw new IllegalArgumentException("Position does not exist on board");
         }
-        pieces.add(piece);
+        return board.put(position, Optional.of(piece));
     }
 
     @Override
     public Board clone() {
-        Board clone = new Board();
-        pieces.forEach(piece -> clone.addPiece(piece.clone()));
-        return clone;
+        return new Board(new HashMap<>(board));
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder();
+        builder.append("     A   B   C   D   E   F   G   H    ");
+        builder.append(System.lineSeparator());
+        for (int y = 8; y >= 1 ; y--) {
+            builder.append("   ---------------------------------   ");
+            builder.append(System.lineSeparator());
+            builder.append(" " + y + " ");
+            for (char x = 'A'; x <= 'H'; x++) {
+                Optional<Piece> piece = get(new Position(x, y));
+                if (piece.isPresent()) {
+                    builder.append("| " + piece.get().icon());
+                } else {
+                    builder.append("|   ");
+                }
+                
+            }
+            builder.append("|");
+            builder.append(" " + y + " ");
+            builder.append(System.lineSeparator());
+        }
+        builder.append("   ---------------------------------   ");
+        builder.append(System.lineSeparator());
+        builder.append("     A   B   C   D   E   F   G   H    ");
+        return builder.toString();
+    }
+
+    public Optional<Piece>[][] toArray() {
+        Optional<Piece>[][] boardArray = (Optional<Piece>[][]) new Optional<?>[WIDTH][HEIGHT];
+        for (int x = 0; x < WIDTH; x++) {
+            for (int y = 0; y < HEIGHT; y++) {
+                boardArray[x][y] = board.get(Position.fromCoords(x, y));
+            }
+        }
+        return boardArray;
     }
 }
