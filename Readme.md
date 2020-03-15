@@ -1,5 +1,3 @@
 # Chess
 
-## To do
-- Fix castling through check
-- How should we store the history of a game?
+Implementation of chess in Java. Still a work in progress
